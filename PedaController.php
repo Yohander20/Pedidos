@@ -25,7 +25,7 @@ class Gerencia_PedaController extends Baseniv3480Controller
         
         
         $this->scriptTagsAdd =  '<link href="/css/anchorpad.css" rel="stylesheet"/>'.
-                                 '<script src="/js/nodyn/gerencia_peda.js?ver=1.a016"></script>'
+                                 '<script src="/js/nodyn/gerencia_peda.js?ver=1.a018"></script>'
                         ;
         
         $this->SubformaSub = array('recargos','comprobantes');
@@ -48,21 +48,13 @@ class Gerencia_PedaController extends Baseniv3480Controller
     
     public function asignaOpcionesForm($param=array())         
         {
-            /*
-            //bitwise comparison
-            $values = array(0, 1, 2, 4,256, 260);
-            $test = 4;
-            $format = '(%1$2d = %1$04b) = (%2$2d = %2$04b)'
-                    . ' %3$s (%4$2d = %4$04b)' . "<br>";
-            echo "\n Bitwise AND <br>";
-            foreach ($values as $value) {
-                $result = $value & $test;
-                printf($format, $result, $value, '&', $test);
-            }
-             * 
-             */
-             
             
+             
+             $authNamespace = new Zend_Session_Namespace('Zend_Auth');
+             $modelEmp= new Default_Model_Empresasgrupo();   
+             $medidas=$modelEmp->getEmpresaMedidas();
+             $medidas=$medidas[$authNamespace->empresa];
+             //echo  '<pre>', print_r($medidas), '</pre>';
             $dbparam=Zend_Registry::get('dbparam');
             $dbsec = Zend_Db::factory($dbparam['dll'], array(
                 'host'     => $dbparam['host'],
@@ -85,7 +77,7 @@ class Gerencia_PedaController extends Baseniv3480Controller
             $Fechahoy=$param['Fechahoy'];
             $OpcionesList=array();
             
-            $authNamespace = new Zend_Session_Namespace('Zend_Auth');
+            
             $authNamespace->rangosxfirma=$rangosxfirma;
             $authNamespace->nombresxfirma=$nombresxfirma; 
             $firma=$authNamespace->firma;
@@ -104,6 +96,7 @@ class Gerencia_PedaController extends Baseniv3480Controller
             $nowrap=" white-space: nowrap;";
             
             $regs=$param['Row'];
+            //echo  '<pre>', print_r($regs), '</pre>';
             $table=  '<table class="table table-condensed table-hover" id="oblig" border="0" cellpadding="4" style="width:100%"><tr class="titulos">';
             $camposcol=array('Numero','TipoMoneda','MontoPedido','Cliente','FechaMov','FechaCompromiso','TotalPedidosCli','SaldoActual','SaldoVencido','TipoPago','DiasAprobado','EstadoTexto');
             if ($firma) {
@@ -394,7 +387,10 @@ class Gerencia_PedaController extends Baseniv3480Controller
             
             
             $model1=new Inventario_Model_Monemodel();
-            $OpcionesList['TipoMoneda']=$model1->getUltCotizPeriodo(); 
+            //$OpcionesList['TipoMoneda']=$model1->getUltCotizPeriodo(); 
+            $OpcionesList['TipoMoneda']=array('$'=>'$','BS'=>'Bs'); 
+            
+            
             $OpcionesList['Filtro']=array('Todos','Aprobados','Por Aprobar'); 
             $OpcionesList['TotalPedidos']=$TotalPedidos;
             $OpcionesList['TotalAprob']=$TotalAprob;
@@ -424,6 +420,14 @@ INNER JOIN EN01CLIE b  ON a.CodClienteProveedor = b.codigo
  WHERE (((a.Estado)=0 Or (a.Estado)=1)    AND ((MT01MOVI.EsAprobable)=1) AND ((MT01MOVI.CompraVenta)=1)) 
  ORDER BY  a.Referencia, a.FechaMov DESC";//*/ //modificacion 30/04/2018 - cambios modulo gerencia aprobacion ver servicios
           //modificacion 30/04/2018 - cambios modulo gerencia aprobacion ver servicios:
+          
+           $authNamespace = new Zend_Session_Namespace('Zend_Auth');
+             $modelEmp= new Default_Model_Empresasgrupo();   
+             $medidas=$modelEmp->getEmpresaMedidas();
+             $medidas=$medidas[$authNamespace->empresa];
+             //echo  '<pre>', print_r($medidas), '</pre>';
+             
+             
           $modelVargen=new Default_Model_Defimodel;
           $vargen = $modelVargen->getSelectWhereOrderSQL('DesactPedAuto,DiasRegPedido','1=1', '');
           $vargen=$vargen[0];
@@ -461,7 +465,7 @@ inner join mt01tipa p ON a.TipoPago=p.Codigo
            */
          
          
-         $sqlstr="SELECT a.CodMovimiento, a.Referencia, a.FechaMov, c.FechaCompromiso,  a.CodClienteProveedor, a.NombreClienteProveedor, (SELECT CASE WHEN Formula='0' THEN 1 ELSE 0 END FROM mt01tipa WHERE Codigo=a.TipoPago)   as PrePago ,concat(a.TipoPago,'<br>(',p.Descripcion,')') as TipoPago, a.Estado, a.Firmas, 
+       echo  $sqlstr="SELECT a.CodMovimiento, a.Referencia, a.FechaMov, c.FechaCompromiso,  a.CodClienteProveedor, a.NombreClienteProveedor, (SELECT CASE WHEN Formula='0' THEN 1 ELSE 0 END FROM mt01tipa WHERE Codigo=a.TipoPago)   as PrePago ,concat(a.TipoPago,'<br>(',p.Descripcion,')') as TipoPago, a.Estado, a.Firmas, 
 a.CodVendedor,  a.FechaFirma, b.Denominacion, b1.Tipo, a.TipoMoneda, b.Cedula, b.representante, CASE WHEN a.Estado=1 then DATEDIFF(day,a.FechaFirma,'$Fechahoy') else null end AS DiasAprobado,
           (select sum(t.Cantidad*t.PreUnitario) from dt01fact t where t.CodMovimiento=a.CodMovimiento and t.Referencia=a.Referencia) as MontoPedido,
           (select sum(ts.Cantidad*ts.PrecioUnitario) from dt03fact ts where ts.CodMovimiento=a.CodMovimiento and ts.Referencia=a.Referencia) as MontoPedidoServ,
@@ -470,6 +474,8 @@ and a1.Referencia=b1.Referencia JOIN MT01MOVI c1 ON a1.CodMovimiento = c1.Codigo
 where (a1.CodClienteProveedor=a.CodClienteProveedor) and ((a1.Estado=0) or (a1.Estado=1)) and (c1.EsAprobable=1) and (c1.CompraVenta=1)) as TotalPedidosCli,
 (select sum(ts.Cantidad*ts.PrecioUnitario) from en01fact aa1 join dt03fact ts on aa1.CodMovimiento=ts.CodMovimiento and aa1.Referencia=ts.Referencia JOIN MT01MOVI cc1 ON aa1.CodMovimiento = cc1.Codigo
 where (aa1.CodClienteProveedor=a.CodClienteProveedor) and ((aa1.Estado=0) or (aa1.Estado=1)) and (cc1.EsAprobable=1) and (cc1.CompraVenta=1)) as TotalPedidosCliServ
+          , (SELECT isnull(sum(Cantidad),0) as Cantidad FROM dt05fact tk where UnidadMedida='{$medidas['medida1']}' and tk.CodMovimiento=a.CodMovimiento and tk.Referencia=a.Referencia) as MontoMed1
+, (SELECT isnull(sum(Cantidad),0) as Cantidad FROM dt05fact tk where UnidadMedida='{$medidas['medida2']}' and tk.CodMovimiento=a.CodMovimiento and tk.Referencia=a.Referencia) as MontoMed2
 FROM (EN01FACT a JOIN DT08FACT c ON a.CodMovimiento = c.CodMovimiento and a.Referencia=c.Referencia  JOIN MT01MOVI ON a.CodMovimiento = MT01MOVI.Codigo)        
 INNER JOIN EN01CLIE b  ON a.CodClienteProveedor = b.codigo INNER JOIN DT05CLIE b1  ON a.CodClienteProveedor = b1.codigo
 inner join mt01tipa p ON a.TipoPago=p.Codigo
@@ -520,7 +526,6 @@ inner join mt01tipa p ON a.TipoPago=p.Codigo
          
          $resultarray['HTotalPedidos']=$param['OptionsList']['TotalPedidos'];
          $resultarray['TotalPedidos']=$this->mainmodel->formatDec2($param['OptionsList']['TotalPedidos']);
-         
          $resultarray['HTotalAprob']=$param['OptionsList']['TotalAprob'];
          $resultarray['TotalAprob']=$this->mainmodel->formatDec2($param['OptionsList']['TotalAprob']);
          
